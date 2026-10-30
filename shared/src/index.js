@@ -10,3 +10,5 @@ export * from './collision.js';
 export * from './map.js';
 export * from './waypoints.js';
 export * from './protocol.js';
+export * from './bots.js';
+export * from './sim.js';

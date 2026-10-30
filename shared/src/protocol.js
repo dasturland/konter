@@ -9,6 +9,7 @@ export const C2S = Object.freeze({
   BUY: 'buy',
   READY: 'ready',
   LEAVE: 'leave',
+  HOST: 'host',
 });
 
 export const S2C = Object.freeze({
@@ -16,10 +17,11 @@ export const S2C = Object.freeze({
   SNAPSHOT: 'snapshot',
   EVENT: 'event',
   CHAT: 'chat',
+  LOBBY: 'lobby',
   ERROR: 'error',
 });
 
-export const EVENT_KINDS = Object.freeze(['kill', 'bomb', 'round', 'join', 'leave', 'buy']);
+export const EVENT_KINDS = Object.freeze(['kill', 'bomb', 'round', 'join', 'leave', 'buy', 'fx']);
 
 export const MAX_CLIENT_MESSAGE_BYTES = 1024;
 export const MAX_SERVER_MESSAGE_BYTES = 65536;
@@ -32,6 +34,10 @@ export const ERROR_CODES = Object.freeze({
   ROOM_NOT_FOUND: 'room_not_found',
   ROOM_FULL: 'room_full',
   RATE_LIMIT: 'rate_limit',
+  NOT_HOST: 'not_host',
+  NOT_READY: 'not_ready',
+  KICKED: 'kicked',
+  BAD_STATE: 'bad_state',
 });
 
 export const ERROR_MESSAGES_UZ = Object.freeze({
@@ -41,10 +47,17 @@ export const ERROR_MESSAGES_UZ = Object.freeze({
   room_not_found: 'Xona topilmadi',
   room_full: 'Xona to\'la',
   rate_limit: 'Juda tez yuboryapsiz',
+  not_host: 'Faqat xona egasi buni qila oladi',
+  not_ready: 'Hamma o\'yinchi tayyor emas',
+  kicked: 'Siz xonadan chiqarildingiz',
+  bad_state: 'Hozir bu amalni bajarib bo\'lmaydi',
 });
 
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_CODE_PATTERN = new RegExp(`^[${ROOM_ALPHABET}]{${ROOM_CODE_LENGTH}}$`);
+export const DIFFICULTY_IDS = Object.freeze(['oson', 'orta', 'qiyin']);
+export const HOST_ACTIONS = Object.freeze(['addBot', 'removeBot', 'difficulty', 'kick', 'start']);
+const MAX_TOKEN_LENGTH = 64;
 const SLOT_NAMES = ['primary', 'secondary', 'knife', 'smoke', 'flash', 'he'];
 
 // eslint-disable-next-line no-control-regex
@@ -134,7 +147,12 @@ const validators = {
       if (!isValidRoomCode(m.room)) return bad(ERROR_CODES.ROOM_NOT_FOUND);
       room = normalizeRoomCode(m.room);
     }
-    return { ok: true, value: { t: C2S.JOIN, name: sanitizeName(m.name), room } };
+    let token = '';
+    if (m.token !== undefined && m.token !== null && m.token !== '') {
+      if (typeof m.token !== 'string' || m.token.length > MAX_TOKEN_LENGTH || !/^[A-Za-z0-9_-]+$/.test(m.token)) return bad();
+      token = m.token;
+    }
+    return { ok: true, value: { t: C2S.JOIN, name: sanitizeName(m.name), room, token } };
   },
   [C2S.INPUT](m) {
     if (!Number.isInteger(m.seq) || m.seq < 0 || m.seq > 0x7fffffff) return bad();
@@ -183,6 +201,22 @@ const validators = {
   [C2S.LEAVE]() {
     return { ok: true, value: { t: C2S.LEAVE } };
   },
+  [C2S.HOST](m) {
+    if (!HOST_ACTIONS.includes(m.action)) return bad();
+    const value = { t: C2S.HOST, action: m.action };
+    if (m.action === 'difficulty') {
+      if (!DIFFICULTY_IDS.includes(m.value)) return bad();
+      value.value = m.value;
+    }
+    if (m.action === 'kick' || m.action === 'removeBot') {
+      if (m.action === 'kick' && (typeof m.id !== 'string' || m.id.length === 0 || m.id.length > 32)) return bad();
+      if (m.action === 'removeBot' && m.id !== undefined && (typeof m.id !== 'string' || m.id.length > 32)) return bad();
+      value.id = m.id ?? '';
+    }
+    if (m.action === 'addBot' && m.team !== undefined && m.team !== 'CT' && m.team !== 'T') return bad();
+    if (m.action === 'addBot') value.team = m.team ?? '';
+    return { ok: true, value };
+  },
 };
 
 /** Validates an already decoded client message. Returns {ok, value} or {ok:false, error}. */
@@ -214,6 +248,9 @@ export function validateServerMessage(message) {
       return { ok: true, value: message };
     case S2C.CHAT:
       if (typeof message.from !== 'string' || typeof message.text !== 'string') return bad();
+      return { ok: true, value: message };
+    case S2C.LOBBY:
+      if (!Array.isArray(message.players) || typeof message.host !== 'string') return bad();
       return { ok: true, value: message };
     case S2C.ERROR:
       if (typeof message.code !== 'string') return bad();
