@@ -10,6 +10,8 @@ export const C2S = Object.freeze({
   READY: 'ready',
   LEAVE: 'leave',
   HOST: 'host',
+  PING: 'ping',
+  TEAM: 'team',
 });
 
 export const S2C = Object.freeze({
@@ -38,6 +40,7 @@ export const ERROR_CODES = Object.freeze({
   NOT_READY: 'not_ready',
   KICKED: 'kicked',
   BAD_STATE: 'bad_state',
+  TEAM_FULL: 'team_full',
 });
 
 export const ERROR_MESSAGES_UZ = Object.freeze({
@@ -51,6 +54,7 @@ export const ERROR_MESSAGES_UZ = Object.freeze({
   not_ready: 'Hamma o\'yinchi tayyor emas',
   kicked: 'Siz xonadan chiqarildingiz',
   bad_state: 'Hozir bu amalni bajarib bo\'lmaydi',
+  team_full: 'Jamoa to\'la',
 });
 
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -197,6 +201,14 @@ const validators = {
   [C2S.READY](m) {
     if (typeof m.ready !== 'boolean') return bad();
     return { ok: true, value: { t: C2S.READY, ready: m.ready } };
+  },
+  [C2S.PING](m) {
+    if (!Number.isInteger(m.ms) || m.ms < 0 || m.ms > 9999) return bad();
+    return { ok: true, value: { t: C2S.PING, ms: m.ms } };
+  },
+  [C2S.TEAM](m) {
+    if (m.team !== 'CT' && m.team !== 'T' && m.team !== 'auto') return bad();
+    return { ok: true, value: { t: C2S.TEAM, team: m.team } };
   },
   [C2S.LEAVE]() {
     return { ok: true, value: { t: C2S.LEAVE } };

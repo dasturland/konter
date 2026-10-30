@@ -93,6 +93,7 @@ export class Room {
       difficulty: this.difficulty,
       players: [...this.members.values()].map((m) => ({
         id: m.id, name: m.name, team: m.team, ready: m.ready, bot: m.isBot, host: m.id === this.host, connected: m.connected,
+        ping: m.ping ?? 0,
       })),
     };
   }
@@ -142,7 +143,7 @@ export class Room {
     if (this.members.size >= MAX_PLAYERS) this.evictBot(team);
     const member = {
       id: `p${this.nextId++}`, name, team, ready: false, isBot: false, client, connected: true,
-      token: this.makeToken(), graceTicks: 0,
+      token: this.makeToken(), graceTicks: 0, ping: 0,
     };
     this.members.set(member.id, member);
     if (!this.host) this.host = member.id;
@@ -281,6 +282,45 @@ export class Room {
     this.broadcastLobby();
   }
 
+  /**
+   * Lets a player pick a team in the lobby. 'auto' balances humans and bots across teams.
+   * A team already holding TEAM_SIZE members is refused; a bot is evicted to make room for a human.
+   */
+  setTeam(id, team) {
+    const m = this.members.get(id);
+    if (!m || m.isBot || this.state !== STATE_LOBBY) return false;
+    let target = team;
+    if (team === 'auto') {
+      const others = (t) => this.teamMembers(t).filter((x) => x.id !== id).length;
+      target = others(TEAM_CT) <= others(TEAM_T) ? TEAM_CT : TEAM_T;
+    }
+    if (target !== TEAM_CT && target !== TEAM_T) return false;
+    if (m.team === target) return true;
+    if (this.teamMembers(target).length >= TEAM_SIZE) {
+      const bot = this.teamMembers(target).reverse().find((x) => x.isBot);
+      if (!bot) {
+        this.sendError(m, ERROR_CODES.TEAM_FULL);
+        return false;
+      }
+      this.deleteMember(bot.id);
+    }
+    m.team = target;
+    this.broadcastLobby();
+    return true;
+  }
+
+  /** Stores the round trip time the client measured for itself. */
+  setPing(id, ms) {
+    const m = this.members.get(id);
+    if (m && !m.isBot) m.ping = ms;
+  }
+
+  pings() {
+    const out = {};
+    for (const m of this.members.values()) out[m.id] = m.isBot ? 0 : (m.ping ?? 0);
+    return out;
+  }
+
   allReady() {
     return this.humans().every((m) => m.id === this.host || m.ready);
   }
@@ -331,6 +371,7 @@ export class Room {
 
   tick() {
     this.tickCount += 1;
+    if (this.state === STATE_LOBBY && this.tickCount % (2 * TICK_RATE) === 0 && this.humans().length > 0) this.broadcastLobby();
     if (this.state !== STATE_PLAYING || !this.sim) return;
     for (const m of [...this.members.values()]) {
       if (!m.isBot && !m.connected && m.graceTicks > 0) {
@@ -341,7 +382,7 @@ export class Room {
     if (!this.sim) return;
     const events = this.sim.tick();
     const matchEnded = events.some((e) => e.type === 'match_end');
-    this.broadcast(this.sim.snapshot());
+    this.broadcast({ ...this.sim.snapshot(), pings: this.pings() });
     for (const e of events) {
       const kind = EVENT_KIND[e.type];
       if (kind) this.broadcast({ t: S2C.EVENT, kind, ...e });

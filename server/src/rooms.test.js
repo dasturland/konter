@@ -266,3 +266,46 @@ describe('bots replace humans', () => {
     expect(host.conn.messages.some((m) => m.t === 'error' && m.code === 'rate_limit')).toBe(true);
   });
 });
+
+describe('ping and team selection', () => {
+  it('stores the client reported ping and publishes it in the lobby', () => {
+    const mgr = setup();
+    const a = join(mgr, 'Ali');
+    send(mgr, a, { t: 'ping', ms: 42 });
+    mgr.getRoom(a.conn.last('welcome').room).broadcastLobby();
+    const me = a.conn.last('lobby').players.find((p) => p.name === 'Ali');
+    expect(me.ping).toBe(42);
+  });
+
+  it('rejects a malformed ping', () => {
+    const mgr = setup();
+    const a = join(mgr, 'Ali');
+    send(mgr, a, { t: 'ping', ms: -5 });
+    expect(a.conn.last('error').code).toBe('bad_message');
+  });
+
+  it('moves a player to the requested team and supports auto balance', () => {
+    const mgr = setup();
+    const a = join(mgr, 'Ali');
+    const room = mgr.getRoom(a.conn.last('welcome').room);
+    const id = a.conn.last('welcome').id;
+    const other = room.members.get(id).team === 'CT' ? 'T' : 'CT';
+    send(mgr, a, { t: 'team', team: other });
+    expect(room.members.get(id).team).toBe(other);
+    send(mgr, a, { t: 'team', team: 'auto' });
+    expect(room.members.get(id).team).toBe('CT');
+  });
+
+  it('replaces a bot when the chosen team is full and refuses when humans fill it', () => {
+    const mgr = setup();
+    const a = join(mgr, 'Ali');
+    const room = mgr.getRoom(a.conn.last('welcome').room);
+    const id = a.conn.last('welcome').id;
+    room.members.get(id).team = 'T';
+    for (let i = 0; i < 5; i++) room.addBot(room.members.get(id), 'CT');
+    send(mgr, a, { t: 'team', team: 'CT' });
+    expect(room.members.get(id).team).toBe('CT');
+    expect(room.teamMembers('CT')).toHaveLength(5);
+    expect(room.teamMembers('CT').filter((m) => m.isBot)).toHaveLength(4);
+  });
+});

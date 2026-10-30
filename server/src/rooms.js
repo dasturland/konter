@@ -89,6 +89,8 @@ export class RoomManager {
       case C2S.BUY: room.buy(client.memberId, msg.item); break;
       case C2S.READY: room.setReady(client.memberId, msg.ready); break;
       case C2S.HOST: room.hostAction(client.memberId, msg); break;
+      case C2S.TEAM: room.setTeam(client.memberId, msg.team); break;
+      case C2S.PING: room.setPing(client.memberId, msg.ms); break;
       case C2S.LEAVE: this.handleLeave(client); break;
       default: break;
     }

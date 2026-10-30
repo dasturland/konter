@@ -30,6 +30,8 @@ export const RATE_LIMITS = Object.freeze({
   [C2S.HOST]: { rate: 5, burst: 10 },
   [C2S.JOIN]: { rate: 0.5, burst: 3 },
   [C2S.LEAVE]: { rate: 1, burst: 3 },
+  [C2S.PING]: { rate: 2, burst: 4 },
+  [C2S.TEAM]: { rate: 2, burst: 4 },
 });
 export const GLOBAL_LIMIT = Object.freeze({ rate: 120, burst: 60 });
 /** A connection that breaks the rules this many times is dropped. */

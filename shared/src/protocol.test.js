@@ -149,3 +149,17 @@ describe('host and token messages', () => {
     expect(validateServerMessage({ t: S2C.LOBBY, players: [] }).ok).toBe(false);
   });
 });
+
+describe('ping and team messages', () => {
+  it('validates ping', () => {
+    expect(validateClientMessage({ t: 'ping', ms: 30 }).ok).toBe(true);
+    expect(validateClientMessage({ t: 'ping', ms: 1.5 }).ok).toBe(false);
+    expect(validateClientMessage({ t: 'ping', ms: 10000 }).ok).toBe(false);
+  });
+
+  it('validates team', () => {
+    expect(validateClientMessage({ t: 'team', team: 'auto' }).value.team).toBe('auto');
+    expect(validateClientMessage({ t: 'team', team: 'CT' }).ok).toBe(true);
+    expect(validateClientMessage({ t: 'team', team: 'X' }).ok).toBe(false);
+  });
+});
