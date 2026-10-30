@@ -126,3 +126,26 @@ describe('names, chat and room codes', () => {
     expect(isValidRoomCode(12345)).toBe(false);
   });
 });
+
+describe('host and token messages', () => {
+  it('validates host actions', () => {
+    expect(validateClientMessage({ t: C2S.HOST, action: 'addBot', team: 'T' }).ok).toBe(true);
+    expect(validateClientMessage({ t: C2S.HOST, action: 'difficulty', value: 'qiyin' }).ok).toBe(true);
+    expect(validateClientMessage({ t: C2S.HOST, action: 'difficulty', value: 'hard' }).ok).toBe(false);
+    expect(validateClientMessage({ t: C2S.HOST, action: 'kick' }).ok).toBe(false);
+    expect(validateClientMessage({ t: C2S.HOST, action: 'kick', id: 'p2' }).value.id).toBe('p2');
+    expect(validateClientMessage({ t: C2S.HOST, action: 'nuke' }).ok).toBe(false);
+    expect(validateClientMessage({ t: C2S.HOST, action: 'start' }).ok).toBe(true);
+  });
+
+  it('accepts a reconnect token only in a safe format', () => {
+    expect(validateClientMessage({ t: C2S.JOIN, name: 'a', token: 'abc_123-X' }).value.token).toBe('abc_123-X');
+    expect(validateClientMessage({ t: C2S.JOIN, name: 'a', token: '<script>' }).ok).toBe(false);
+    expect(validateClientMessage({ t: C2S.JOIN, name: 'a' }).value.token).toBe('');
+  });
+
+  it('validates lobby server messages', () => {
+    expect(validateServerMessage({ t: S2C.LOBBY, host: 'p1', players: [] }).ok).toBe(true);
+    expect(validateServerMessage({ t: S2C.LOBBY, players: [] }).ok).toBe(false);
+  });
+});
