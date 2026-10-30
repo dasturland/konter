@@ -44,6 +44,7 @@ export class NetClient {
     this.pingMs = 0;
     this.sentAt = new Map();
     this.joined = false;
+    this.lastLobby = null;
   }
 
   on(name, fn) {
@@ -124,6 +125,7 @@ export class NetClient {
         break;
       }
       case S2C.LOBBY:
+        this.lastLobby = m;
         this.isHost = m.host === this.id;
         this.emit('lobby', m);
         break;
@@ -204,6 +206,7 @@ export class NetClient {
   chat(text) { this.sendRaw({ t: C2S.CHAT, text }); }
   buy(item) { this.sendRaw({ t: C2S.BUY, item }); }
   ready(ready) { this.sendRaw({ t: C2S.READY, ready }); }
+  team(team) { this.sendRaw({ t: C2S.TEAM, team }); }
   host(action, extra = {}) { this.sendRaw({ t: C2S.HOST, action, ...extra }); }
 
   leave() {
