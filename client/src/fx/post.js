@@ -64,7 +64,7 @@ export class PostProcessing {
   }
 
   get enabled() {
-    return this.settings.preset.post;
+    return this.settings.preset.post && this.settings.get('post');
   }
 
   build() {

@@ -10,6 +10,8 @@ export const QUALITY_PRESETS = {
 export const DEFAULT_SETTINGS = {
   quality: 'orta',
   grain: false,
+  post: true,
+  muted: false,
   sensitivity: 1,
   fov: 75,
   volume: 0.7,
@@ -22,6 +24,8 @@ function sanitize(raw) {
   if (!raw || typeof raw !== 'object') return s;
   if (raw.quality in QUALITY_PRESETS) s.quality = raw.quality;
   if (typeof raw.grain === 'boolean') s.grain = raw.grain;
+  if (typeof raw.post === 'boolean') s.post = raw.post;
+  if (typeof raw.muted === 'boolean') s.muted = raw.muted;
   if (Number.isFinite(raw.sensitivity)) s.sensitivity = Math.min(5, Math.max(0.1, raw.sensitivity));
   if (Number.isFinite(raw.fov)) s.fov = Math.min(110, Math.max(60, raw.fov));
   if (Number.isFinite(raw.volume)) s.volume = Math.min(1, Math.max(0, raw.volume));

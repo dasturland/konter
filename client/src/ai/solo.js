@@ -14,6 +14,8 @@ export class SoloSession {
   constructor({ difficulty = 'orta', team = TEAM_CT, name = 'Siz', seed = (Date.now() & 0xffff) || 1 } = {}) {
     this.sim = new GameSim({ seed, map: MAP, difficulty });
     this.team = team;
+    this.localId = LOCAL_ID;
+    this.isOnline = false;
     this.accumulator = 0;
     this.paused = false;
     this.events = [];
@@ -70,6 +72,12 @@ export class SoloSession {
       punch: this.localPlayer.punch,
     };
   }
+
+  punchOf(id) {
+    return this.sim.players.get(id)?.punch ?? [0, 0];
+  }
+
+  dispose() {}
 
   buy(itemId) {
     return this.sim.buy(LOCAL_ID, itemId);

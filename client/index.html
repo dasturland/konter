@@ -13,20 +13,12 @@
       #scope::before { left: 0; right: 0; top: 50%; height: 2px; }
       #scope::after { top: 0; bottom: 0; left: 50%; width: 2px; }
       #scope.on { display: block; }
-      #start-overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(4, 8, 14, 0.72); cursor: pointer; text-align: center; }
-      #start-overlay h1 { margin: 0; font-size: 44px; letter-spacing: 6px; }
-      #start-overlay p { margin: 0; opacity: 0.8; }
-      #start-overlay.hidden { display: none; }
     </style>
   </head>
   <body>
     <div id="app"></div>
     <div id="scope"></div>
-    <div id="start-overlay">
-      <h1>KONTR-STRAYK 3D</h1>
-      <p>Yakkaxon o'yinni boshlash uchun bosing</p>
-      <p>W A S D - harakat, sichqoncha - nishon, chap tugma - o'q, o'ng tugma - nishonga olish, R - qayta o'qlash</p>
-    </div>
+    <div id="ui"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
