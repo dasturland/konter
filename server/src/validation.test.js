@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MAX_CLIENT_MESSAGE_BYTES } from '@konter/shared';
 import {
-  MAX_VIOLATIONS, TokenBucket, checkSize, clampMove, clampPosition, createGuard, maxTravel, payloadBytes,
+  MAX_VIOLATIONS, TokenBucket, checkSize, createGuard, payloadBytes,
 } from './validation.js';
 
 describe('size limit', () => {
@@ -55,21 +55,5 @@ describe('guard', () => {
     expect(g.shouldClose).toBe(false);
     for (let i = 0; i < MAX_VIOLATIONS; i++) g.violation();
     expect(g.shouldClose).toBe(true);
-  });
-});
-
-describe('speed clamp', () => {
-  it('normalizes oversized movement vectors', () => {
-    const v = clampMove(3, 4);
-    expect(Math.hypot(v.mx, v.mz)).toBeCloseTo(1, 5);
-    expect(clampMove(0.3, 0.2)).toEqual({ mx: 0.3, mz: 0.2 });
-    expect(clampMove(Infinity, 1)).toEqual({ mx: 0, mz: 0 });
-  });
-
-  it('limits travel distance', () => {
-    expect(maxTravel(6, 1 / 30)).toBeCloseTo(0.21, 5);
-    const p = clampPosition({ x: 0, z: 0 }, { x: 100, z: 0 }, 1);
-    expect(p.x).toBeCloseTo(1, 5);
-    expect(clampPosition({ x: 0, z: 0 }, { x: 0.5, z: 0 }, 1)).toEqual({ x: 0.5, z: 0 });
   });
 });

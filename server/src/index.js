@@ -37,6 +37,31 @@ export function createHttpServer({ distDir = defaultDistDir(), manager = null } 
   });
 }
 
+/** Client address; X-Forwarded-For is trusted only when TRUST_PROXY=1 (server sits behind a proxy). */
+export function clientIp(req, env = process.env) {
+  if (env.TRUST_PROXY === '1') {
+    const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim();
+    if (forwarded) return forwarded;
+  }
+  return req.socket.remoteAddress ?? '';
+}
+
+/**
+ * Accepts requests without an Origin header (non-browser clients) and browsers whose Origin host
+ * matches the Host header or is listed in ALLOWED_ORIGINS (comma separated origins).
+ */
+export function isOriginAllowed(req, env = process.env) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  const allowed = String(env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (allowed.includes(origin)) return true;
+  try {
+    return new URL(origin).host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
+
 /** Attaches the websocket endpoint to an http server. ws is loaded lazily. */
 export async function attachWebSocket(server, manager) {
   const { WebSocketServer } = await import('ws');
@@ -44,13 +69,21 @@ export async function attachWebSocket(server, manager) {
   server.on('upgrade', (req, socket, head) => {
     const path = (req.url ?? '').split('?')[0];
     if (path !== WS_PATH) { socket.destroy(); return; }
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws));
+    if (!isOriginAllowed(req)) {
+      socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+    const ip = clientIp(req);
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, ip));
   });
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, ip) => {
     const client = manager.connect({
+      ip,
       send: (text) => { if (ws.readyState === 1) ws.send(text); },
       close: () => ws.close(),
     });
+    if (!client) { ws.close(1013, 'busy'); return; }
     ws.on('message', (data, isBinary) => {
       if (isBinary) { manager.reject(client, 'bad_message'); return; }
       manager.handleMessage(client, data.toString('utf8'));

@@ -308,4 +308,60 @@ describe('ping and team selection', () => {
     expect(room.teamMembers('CT')).toHaveLength(5);
     expect(room.teamMembers('CT').filter((m) => m.isBot)).toHaveLength(4);
   });
+
+  it('blocks a kicked player who rejoins from the same address without a token', () => {
+    const mgr = setup();
+    const { host, others, code } = fillRoom(mgr, 3);
+    others[0].conn.ip = '10.0.0.5';
+    send(mgr, host, { t: 'host', action: 'kick', id: 'p2' });
+    const again = { conn: fakeConn() };
+    again.conn.ip = '10.0.0.5';
+    again.client = mgr.connect(again.conn);
+    send(mgr, again, { t: 'join', name: 'P1', room: code });
+    expect(again.conn.last('error').code).toBe('kicked');
+  });
+
+  it('limits connections globally and per address', () => {
+    const mgr = new RoomManager({ maxConnections: 3, maxPerIp: 2, now: () => 0 });
+    const a = { ip: '1.1.1.1' };
+    const c1 = mgr.connect(a);
+    expect(mgr.connect(a)).not.toBeNull();
+    expect(mgr.connect(a)).toBeNull();
+    expect(mgr.connect({ ip: '2.2.2.2' })).not.toBeNull();
+    expect(mgr.connect({ ip: '3.3.3.3' })).toBeNull();
+    mgr.handleClose(c1);
+    expect(mgr.connect({ ip: '3.3.3.3' })).not.toBeNull();
+  });
+
+  it('limits rooms created per address', () => {
+    const mgr = new RoomManager({ maxRoomsPerIp: 1, now: () => 0 });
+    const first = { conn: fakeConn() };
+    first.conn.ip = '9.9.9.9';
+    first.client = mgr.connect(first.conn);
+    send(mgr, first, { t: 'join', name: 'A', room: '' });
+    expect(first.conn.last('welcome')).toBeDefined();
+    const second = { conn: fakeConn() };
+    second.conn.ip = '9.9.9.9';
+    second.client = mgr.connect(second.conn);
+    send(mgr, second, { t: 'join', name: 'B', room: '' });
+    expect(second.conn.last('error').code).toBe('room_full');
+  });
+
+  it('closes only the room whose tick throws', () => {
+    const mgr = setup();
+    const bad = join(mgr, 'Bad');
+    const good = join(mgr, 'Good');
+    const badRoom = bad.client.room;
+    badRoom.tick = () => { throw new Error('boom'); };
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+      expect(() => mgr.tick()).not.toThrow();
+    } finally {
+      console.error = originalError;
+    }
+    expect(mgr.getRoom(badRoom.code)).toBeNull();
+    expect(mgr.getRoom(good.client.room.code)).not.toBeNull();
+    expect(bad.conn.closed).toBe(true);
+  });
 });

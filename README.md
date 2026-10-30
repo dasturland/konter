@@ -67,6 +67,12 @@ PORT=8080 npm start
 4. Kutish zalida jamoani tanlang yoki avto-balansni bosing, "TAYYORMAN" ni bosing. Xona egasi bot qo'shadi, qiyinlikni tanlaydi, o'yinchini haydaydi va "O'YINNI BOSHLASH" ni bosadi.
 5. Ulanish uzilsa client o'zi qayta ulanishga urinadi va ekranda o'zbekcha xabar ko'rsatadi.
 
+### Xavfsizlik
+- Ochiq internetda serverni faqat TLS (`https`/`wss`) ortida ishlating (ngrok, Railway yoki reverse proxy). Oddiy `http` orqali sessiya tokeni ochiq holda uzatiladi, shuning uchun uni faqat LAN uchun ishlating.
+- Brauzer `Origin` sarlavhasi `Host` bilan mos kelishi shart. Boshqa manzillarga ruxsat berish uchun `ALLOWED_ORIGINS` (vergul bilan ajratilgan) o'zgaruvchisini bering.
+- Server proksi ortida bo'lsa, haqiqiy IP manzil uchun `TRUST_PROXY=1` qo'ying.
+- Chegaralar: jami 1000 ulanish, bitta IP dan 8 ulanish va 2 xona. Haydalgan o'yinchi shu IP dan xonaga qayta qo'shila olmaydi.
+
 ### Lokal tarmoq (LAN)
 1. Kompyuteringizning lokal IP manzilini aniqlang (masalan `192.168.1.20`).
 2. Server ishlayotgan kompyuterda `npm start` bajaring (server `0.0.0.0` da tinglaydi).

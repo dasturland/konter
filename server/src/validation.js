@@ -74,30 +74,3 @@ export function createGuard(now = Date.now) {
     get shouldClose() { return violations >= MAX_VIOLATIONS; },
   };
 }
-
-/** Clamps a movement vector to unit length so diagonal or oversized input cannot exceed speed. */
-export function clampMove(mx, mz) {
-  const len = Math.hypot(mx, mz);
-  if (!Number.isFinite(len)) return { mx: 0, mz: 0 };
-  if (len <= 1) return { mx, mz };
-  return { mx: mx / len, mz: mz / len };
-}
-
-/**
- * Maximum horizontal distance a player may cover in dt seconds at the given top speed.
- * A small tolerance absorbs floating point error and slope steps.
- */
-export function maxTravel(speed, dt, tolerance = 1.05) {
-  return speed * dt * tolerance;
-}
-
-/** Limits how far a claimed position may be from the server position (anti teleport). */
-export function clampPosition(server, claimed, maxDistance) {
-  const dx = claimed.x - server.x;
-  const dz = claimed.z - server.z;
-  const d = Math.hypot(dx, dz);
-  if (!Number.isFinite(d)) return { x: server.x, z: server.z };
-  if (d <= maxDistance) return { x: claimed.x, z: claimed.z };
-  const k = maxDistance / d;
-  return { x: server.x + dx * k, z: server.z + dz * k };
-}

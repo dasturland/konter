@@ -40,6 +40,8 @@ export class Room {
     this.nextBot = 0;
     this.endTicks = 0;
     this.banned = new Set();
+    this.bannedIps = new Set();
+    this.creatorIp = '';
     this.tickCount = 0;
   }
 
@@ -133,6 +135,7 @@ export class Room {
    * @returns {{ok:true, member:object}|{ok:false, error:string}}
    */
   join(name, client, token = '') {
+    if (client && client.ip && this.bannedIps.has(client.ip)) return { ok: false, error: ERROR_CODES.KICKED };
     if (token) {
       const existing = this.humans().find((m) => m.token === token);
       if (existing) return this.reconnect(existing, client);
@@ -270,6 +273,7 @@ export class Room {
     this.sendError(target, ERROR_CODES.KICKED);
     this.banned.add(target.token);
     const client = target.client;
+    if (client && client.ip) this.bannedIps.add(client.ip);
     this.leave(target.id);
     if (client && client.close) client.close();
     return true;

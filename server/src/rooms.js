@@ -7,6 +7,9 @@ import { Room } from './room.js';
 import { checkSize, createGuard } from './validation.js';
 
 export const MAX_ROOMS = 200;
+export const MAX_CONNECTIONS = 1000;
+export const MAX_CONNECTIONS_PER_IP = 8;
+export const MAX_ROOMS_PER_IP = 2;
 
 function defaultToken() {
   return randomBytes(16).toString('hex');
@@ -14,13 +17,20 @@ function defaultToken() {
 
 export class RoomManager {
   /**
-   * @param {{rng?:()=>number, makeToken?:()=>string, now?:()=>number, maxRooms?:number}} options
+   * @param {{rng?:()=>number, makeToken?:()=>string, now?:()=>number, maxRooms?:number, maxConnections?:number, maxPerIp?:number, maxRoomsPerIp?:number}} options
    */
-  constructor({ rng = Math.random, makeToken = defaultToken, now = Date.now, maxRooms = MAX_ROOMS } = {}) {
+  constructor({ rng = Math.random, makeToken = defaultToken, now = Date.now, maxRooms = MAX_ROOMS,
+    maxConnections = MAX_CONNECTIONS, maxPerIp = MAX_CONNECTIONS_PER_IP, maxRoomsPerIp = MAX_ROOMS_PER_IP,
+  } = {}) {
     this.rng = rng;
     this.makeToken = makeToken;
     this.now = now;
     this.maxRooms = maxRooms;
+    this.maxConnections = maxConnections;
+    this.maxPerIp = maxPerIp;
+    this.maxRoomsPerIp = maxRoomsPerIp;
+    this.connections = 0;
+    this.connectionsByIp = new Map();
     this.rooms = new Map();
     this.timer = null;
   }
@@ -47,8 +57,15 @@ export class RoomManager {
     return null;
   }
 
-  createRoom() {
+  roomsCreatedBy(ip) {
+    let n = 0;
+    for (const r of this.rooms.values()) if (r.creatorIp === ip) n += 1;
+    return n;
+  }
+
+  createRoom(ip = '') {
     if (this.rooms.size >= this.maxRooms) return null;
+    if (ip && this.roomsCreatedBy(ip) >= this.maxRoomsPerIp) return null;
     const code = this.uniqueCode();
     if (!code) return null;
     const room = new Room(code, {
@@ -56,13 +73,32 @@ export class RoomManager {
       makeToken: this.makeToken,
       onEmpty: (r) => this.rooms.delete(r.code),
     });
+    room.creatorIp = ip;
     this.rooms.set(code, room);
     return room;
   }
 
-  /** Wraps a transport ({send(text), close()}) into a client session. */
+  /**
+   * Wraps a transport ({send(text), close(), ip?}) into a client session.
+   * Returns null when the global or per-IP connection limit is reached.
+   */
   connect(conn) {
-    return { conn, guard: createGuard(this.now), room: null, memberId: null };
+    const ip = conn.ip ?? '';
+    if (this.connections >= this.maxConnections) return null;
+    if (ip && (this.connectionsByIp.get(ip) ?? 0) >= this.maxPerIp) return null;
+    this.connections += 1;
+    if (ip) this.connectionsByIp.set(ip, (this.connectionsByIp.get(ip) ?? 0) + 1);
+    return { conn, ip, guard: createGuard(this.now), room: null, memberId: null, released: false };
+  }
+
+  releaseConnection(client) {
+    if (client.released) return;
+    client.released = true;
+    this.connections = Math.max(0, this.connections - 1);
+    if (!client.ip) return;
+    const left = (this.connectionsByIp.get(client.ip) ?? 1) - 1;
+    if (left > 0) this.connectionsByIp.set(client.ip, left);
+    else this.connectionsByIp.delete(client.ip);
   }
 
   reply(client, message) {
@@ -106,7 +142,7 @@ export class RoomManager {
     if (client.room) { this.reject(client, ERROR_CODES.BAD_STATE); return; }
     let room;
     if (msg.room === '') {
-      room = this.createRoom();
+      room = this.createRoom(client.ip);
       if (!room) { this.reject(client, ERROR_CODES.ROOM_FULL); return; }
     } else {
       room = this.getRoom(msg.room);
@@ -130,13 +166,36 @@ export class RoomManager {
 
   /** Transport closed. */
   handleClose(client) {
+    this.releaseConnection(client);
     if (client.room && client.memberId) client.room.disconnect(client.memberId);
     client.room = null;
     client.memberId = null;
   }
 
   tick() {
-    for (const room of [...this.rooms.values()]) room.tick();
+    for (const room of [...this.rooms.values()]) {
+      try {
+        room.tick();
+      } catch (err) {
+        this.destroyRoom(room, err);
+      }
+    }
+  }
+
+  /** A room whose tick threw is closed so the other rooms and the process keep running. */
+  destroyRoom(room, err) {
+    console.error(`room ${room.code} failed and was closed:`, err);
+    this.rooms.delete(room.code);
+    for (const m of room.humans()) {
+      try {
+        if (m.client) {
+          m.client.send(encode(errorMessage(ERROR_CODES.BAD_STATE)));
+          if (m.client.close) m.client.close();
+        }
+      } catch {
+        // The socket is already gone; nothing more to notify.
+      }
+    }
   }
 
   start() {
