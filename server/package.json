@@ -1,0 +1,14 @@
+{
+  "name": "@konter/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": { "@konter/shared": "*", "ws": "^8.18.0" },
+  "devDependencies": { "vitest": "^2.1.8" }
+}
