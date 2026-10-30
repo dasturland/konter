@@ -8,4 +8,4 @@ inclusion: always
 - Tashqi rasm/ovoz/model fayllari yo'q: hamma narsa kod bilan yaratiladi.
 - Har bir vazifadan keyin: `npm run lint`, `npm test`, `npm run build` o'tishi shart.
 - Git: har bir vazifa alohida commit (Conventional Commits). Hech qachon force-push qilma. Maxfiy kalitlarni commit qilma.
-- Kodni qisqartirma, placeholder va TODO qoldirma.
+- Kodni qisqartirma, to'ldirma matn va tugallanmagan vazifa belgilarini qoldirma.

@@ -2,9 +2,13 @@
 
 Professional birinchi shaxs (FPS) o'yini: botlar bilan yakka o'yin va onlayn multiplayer. Brauzerda ishlaydi, Three.js (client) va Node.js + ws (server) asosida. Tashqi rasm, ovoz yoki model fayllari yo'q: hamma narsa kod bilan yaratiladi.
 
-## Skrinshot
+## O'yin haqida
 
-_Skrinshot uchun joy: `docs/screenshot.png` faylini qo'shing va shu yerga ulang._
+- **Asosiy menyu**: sekin aylanuvchi bunker kamerasi ustida sovuq neon sarlavha va tugmalar: YAKKAXON, XONA YARATISH, XONAGA QO'SHILISH, SOZLAMALAR.
+- **HUD**: chap tepada sog'liq va zirh, markazda "Dushmanlar: 4 / 5", raund taymeri va hisob ("CT 3 — 2 T"), o'ngda o'q-dori va PAUZA tugmasi, pastda pul, o'ng tomonda o'ldirishlar lentasi, chap pastda mini-xarita. Bomba o'rnatilganda qizil taymer ko'rinadi.
+- **Xarid menyusi** (B): toifalar bo'yicha, pul yetmasa narx qizil bo'ladi, xaridda kassa ovozi eshitiladi.
+- **Onlayn**: xona kodi (5 belgi), ulashish havolasi, kutish zali (jamoa, tayyorlik, ping, chat), xona egasi uchun bot va qiyinlik boshqaruvi.
+- **Audio**: hamma ovoz Web Audio bilan sintezlanadi: har bir qurol, qadam (temir panjarada jaranglaydi), bomba signali (oxirgi 10 soniyada tezlashadi), portlash, 3D joylashuv, devor orqasida past chastotali filtr va bunker aks-sadosi.
 
 ## O'rnatish
 
@@ -42,22 +46,26 @@ PORT=8080 npm start
 | Sichqoncha | Atrofga qarash, chap tugma otish |
 | O'ng tugma (RMB) | Nishonga olish |
 | R | Qayta o'qlash |
-| E | Harakat (bomba o'rnatish / zararsizlantirish) |
+| E | Bomba o'rnatish / zararsizlantirish (ushlab turing), qurolni yerdan olish |
 | B | Xarid menyusi |
-| 1-4 | Qurol tanlash |
+| 1, 2, 3 | Asosiy qurol, to'pponcha, pichoq |
+| 4, 5, 6 | Tutun, yorug'lik, portlovchi granata tashlash |
 | Space | Sakrash |
-| Ctrl | Cho'kkalash |
 | Shift | Sekin yurish |
-| G | Qurolni tashlash |
-| T | Chat |
-| TAB | Hisob jadvali |
+| G | Portlovchi granata tashlash |
+| T | Chat (onlayn) |
+| TAB (ushlab turing) | Hisob jadvali: O'ldirish / O'lim / Pul / Ping |
 | ESC | Pauza / menyu |
+| ← → | O'lgandan keyin jamoadoshni kuzatishni almashtirish |
 | M | Ovozni o'chirish/yoqish |
 
 ## Onlayn o'ynash yo'riqnomasi
 
 1. Serverni ishga tushiring: `npm start`.
-2. O'yinda "Onlayn" ni tanlang va xona yarating yoki xona kodi bilan qo'shiling.
+2. Asosiy menyuda "XONA YARATISH" ni tanlang, ismingizni kiriting. Ekranda 5 belgili kod va ulashish havolasi paydo bo'ladi (nusxalash tugmalari bilan).
+3. Do'stlar "XONAGA QO'SHILISH" orqali kodni kiritadi yoki havolani (`?room=KOD`) ochadi. Xonada eng ko'pi bilan 10 o'yinchi bo'lishi mumkin.
+4. Kutish zalida jamoani tanlang yoki avto-balansni bosing, "TAYYORMAN" ni bosing. Xona egasi bot qo'shadi, qiyinlikni tanlaydi, o'yinchini haydaydi va "O'YINNI BOSHLASH" ni bosadi.
+5. Ulanish uzilsa client o'zi qayta ulanishga urinadi va ekranda o'zbekcha xabar ko'rsatadi.
 
 ### Lokal tarmoq (LAN)
 1. Kompyuteringizning lokal IP manzilini aniqlang (masalan `192.168.1.20`).
